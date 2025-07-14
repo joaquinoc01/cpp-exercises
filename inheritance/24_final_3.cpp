@@ -87,39 +87,61 @@ public:
     }
 };
 
+void attackMonster(Player& p, Monster& m)
+{
+    // If player is dead it does not attack
+    if( p.isDead() )
+        return;
+
+    std::cout << "You hit the " << m.getName() << " for " << p.getDamage() << " damage.\n";
+    m.reduceHealth( p.getDamage() );
+    if( m.isDead() )
+    {
+        std::cout << "You killed the " << m.getName() << '\n';
+        p.levelUp();
+        std::cout << "You are now level " << p.getLevel() << ".\n";
+        p.addGold(m.getGold());
+        std::cout << "You get " << m.getGold() << " gold.\n";
+    }
+}
+
+void attackPlayer(Player& p, Monster& m)
+{
+    // If monster is dead it does not attack
+    if( m.isDead() )
+        return;
+
+    std::cout << "The " << m.getName() << " hits you for " << m.getDamage() << " damage.\n";
+    p.reduceHealth(m.getDamage());
+}
+
 void fightMonster(Player& p, Monster& m)
 {
-    char q;
+    char q{};
 
-    while( true )
+    while( !p.isDead() && !m.isDead() )
     {
+        std::cout << "Your health is " << p.getHealth() << ".\n";
         std::cout << "(R)un or (F)ight: ";
         std::cin >> q;
 
         if( q == 'f' || q == 'F' )
         {
-            m.reduceHealth( p.getDamage() );
-            if( m.isDead() )
-            {
-                std::cout << "You killed the " << m.getName() << std::endl;
-                p.levelUp();
-                std::cout << "You are now level " << p.getLevel() << '.' << std::endl;
-                return;
-            }
+            attackMonster(p, m);
+            attackPlayer(p, m);
         }
         else if ( q == 'r' || q == 'R' )
         {
-            int num { Random::get(1, 100) };
-            if(num > 50) // Successfully flee
+            if(Random::get(1, 2) == 1) // Successfully flee
             {
-                std::cout << "You successfully fled." << std::endl;
+                std::cout << "You successfully fled.\n";
                 return;
             }
             else
             {
-                std::cout << "The " << m.getName() << " hit you for " << m.getDamage() << " damage." << std::endl;
-                p.reduceHealth(m.getDamage());
-                if( p.isDead() )
+                std::cout << "You failed to flee.\n";
+                attackPlayer(p, m);
+                continue;
             }
         }
     }
@@ -132,15 +154,26 @@ int main()
     std::cin >> name;
 
     Player p { name };
-    std::cout << "Welcome, " << p.getName() << std::endl;
+    std::cout << "Welcome, " << p.getName() << '\n';
 
     while(!p.isDead() && !p.hasWon())
     {
         Monster m{ Monster::getRandomMonster() };
-        std::cout << "You have encountered a " << m.getName() << " (" << m.getSymbol() << ").";
+        std::cout << "You have encountered a(n) " << m.getName() << " (" << m.getSymbol() << ").\n";
 
         fightMonster(p, m);
     }
+
+    if( p.isDead() )
+    {
+        std::cout << "You died at level " << p.getLevel() << " and with " << p.getGold() << " gold.\n";
+        std::cout << "Too bad you can't take it with you!\n";
+    }
+    else
+    {
+        std::cout << "You won the game with " << p.getGold() << " gold!\n";
+    }
+
 
 	return 0;
 }
