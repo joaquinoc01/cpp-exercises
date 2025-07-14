@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <string_view>
+#include <sstream>
 
 #include "../Random.h"
 
@@ -35,6 +36,79 @@ public:
 
 };
 
+class Potion
+{
+public:
+    enum Type
+    {
+        health,
+        strength,
+        poison,
+
+        max_types
+    };
+
+    enum Size
+    {
+        small,
+        medium,
+        large,
+
+        max_sizes
+    };
+
+private:
+    Type m_type{};
+    Size m_size{};
+
+public:
+    Potion(Type type, Size size)
+        : m_type{ type }
+        , m_size{ size }
+    {
+    }
+
+    Type getType() const { return m_type; }
+    Size getSize() const { return m_size; }
+
+    static std::string_view getPotionSizeName(Size size)
+    {
+        static constexpr std::string_view names[] {
+            "Small",
+            "Medium",
+            "Large"
+        };
+        return names[size];
+    }
+
+    static std::string_view getPotionTypeName(Type type)
+    {
+        static constexpr std::string_view types[] {
+            "Health",
+            "Strength",
+            "Poison"
+        };
+        return types[type];
+    }
+
+    std::string getName() const
+    {
+        std::stringstream result{};
+
+        result << getPotionSizeName(getSize()) << " potion of " << getPotionTypeName(getType());
+
+        return result.str();
+    }
+
+    static Potion getRandomPotion()
+    {
+        return Potion{
+            static_cast<Type>(Random::get(0, max_types - 1)),
+            static_cast<Size>(Random::get(0, max_sizes - 1))
+        };
+    }
+};
+
 class Player : public Creature
 {
     int m_level {1};
@@ -52,6 +126,29 @@ public:
 
     int getLevel() const { return m_level; }
     bool hasWon() { return m_level >= 20; }
+
+    void drinkPotion(const Potion& potion)
+    {
+        switch( potion.getType() )
+        {
+            case Potion::health:
+                // Only health potions are dependent on size
+                m_health += ((potion.getSize() == Potion::large) ? 5 : 2); // Large potions restore 5 health points
+                break;
+            case Potion::strength:
+                ++m_damage;
+                break;
+            case Potion::poison:
+                reduceHealth(1);
+                break;
+            case Potion::max_types: // To silence compiler warnings
+                break;
+            // We don't use default because we want the compiler to complain
+            // if we add a new potion but forget to fully implement it
+        }
+
+        std::cout << "You drank a " << potion.getName() << '\n';
+    }
 };
 
 class Monster : public Creature
@@ -102,6 +199,17 @@ void attackMonster(Player& p, Monster& m)
         std::cout << "You are now level " << p.getLevel() << ".\n";
         p.addGold(m.getGold());
         std::cout << "You get " << m.getGold() << " gold.\n";
+        if( Random::get(1, 10) <= 3 ) // 30% chance of finding a potion
+        {
+            Potion potion{ Potion::getRandomPotion() };
+            std::cout << "You found a mythical potion! Do you want to drink it? [y/n]: ";
+            char input{};
+            std::cin >> input;
+            if( input == 'y' )
+                p.drinkPotion(potion);
+            else if ( input == 'n' )
+                std::cout << "You left the potion...\n";
+        }
     }
 }
 
